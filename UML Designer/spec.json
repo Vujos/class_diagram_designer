@@ -1,0 +1,9 @@
+{
+    "name": "UML Designer",
+    "description": "Simple class diagram designer",
+    "symbolic_name": "uml_designer",
+    "app_version": "1.0.0",
+    "version": "1.1.0",
+    "category": "general",
+    "enabled": true
+}
