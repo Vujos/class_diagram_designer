@@ -1,11 +1,11 @@
 from PySide2 import QtWidgets, QtCore
 import json
 
-from model.item_relation import ItemRelation
-from model.item_interface import ItemInterface
-from model.item_class import ItemClass
-from model.item_function import ItemFunction
-from model.item_atribute import ItemAtribute
+from .item_relation import ItemRelation
+from .item_interface import ItemInterface
+from .item_class import ItemClass
+from .item_function import ItemFunction
+from .item_atribute import ItemAtribute
 
 
 class FileManagment():
