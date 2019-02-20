@@ -1,14 +1,10 @@
 from PySide2 import QtWidgets, QtGui, QtCore
 from functools import partial
-import json
 import sys
 
-from .item_dialog import ItemForm
-from ..model.item_relation import ItemRelation
-from ..model.item_interface import ItemInterface
-from ..model.item_class import ItemClass
-from ..model.item_function import ItemFunction
-from ..model.item_atribute import ItemAtribute
+from item_dialog import ItemForm
+from model.item_relation import ItemRelation
+from model.file_managment import FileManagment
 
 
 class UmlWidget(QtWidgets.QGraphicsView):
@@ -30,57 +26,6 @@ class UmlWidget(QtWidgets.QGraphicsView):
         self.setMouseTracking(True)
 
         self.graphics_item = None
-
-    def save_file(self):
-        dlg = QtWidgets.QFileDialog(self)
-        dlg.setWindowTitle('Save file')
-        x = dlg.getSaveFileName()
-        if x[0].strip() != "":
-            with open(x[0], 'w') as file:
-                items = []
-                for item in self.mine_items:
-                    items.append(item.toJSON())
-
-                file.write(json.dumps(items))
-
-    def load_file(self, path):
-        with open(path, 'r') as file:
-            self.mine_items = []
-
-            for item in self.scene.items():
-                self.scene.removeItem(item)
-
-            items = json.loads(file.read())
-            relations = []
-            for item in items:
-                item = json.loads(item)
-                if "atributes" in item:
-                    new_item = ItemClass(item["name"], [], [], item["item_color"], [])
-                else:
-                    new_item = ItemInterface(item["name"], [], [], item["item_color"])
-                for fun in item["functions"]:
-                    new_item.functions.append(ItemFunction(**fun))
-                if isinstance(new_item, ItemClass):
-                    for atr in item["atributes"]:
-                        new_item.atributes.append(ItemAtribute(**atr))
-                self.mine_items.append(new_item)
-                new_item.draw(QtCore.QPoint(float(item["cordinates"]['x']), float(item["cordinates"]['y'])))
-                self.scene.addItem(new_item.graphics_item)
-                for rel in item["relationships"]:
-                    del rel["graphics_item"]
-                    relations.append({new_item: ItemRelation(**rel)})
-            for rel in relations:
-                for key in rel:
-                    for item in self.mine_items:
-                        if item.name == rel[key].host:
-                            rel[key].host = item
-                            rel[key].cordinates = QtCore.QPointF(float(rel[key].cordinates['x']), float(rel[key].cordinates['y']))
-                            key.relationships.append(rel[key])
-                            self.scene.addItem(key.relationships[-1].graphics_item)
-                            self.hovered = item
-                            self.moving()
-                            break
-            self.hovered = None
 
     def moving(self):
         for item in self.mine_items:
@@ -216,7 +161,7 @@ class UmlWidget(QtWidgets.QGraphicsView):
 
         save_action = QtWidgets.QAction(self)
         save_action.setText("Save to file")
-        save_action.triggered.connect(self.save_file)
+        save_action.triggered.connect(partial(FileManagment.save_file, self.mine_items))
         self.addAction(save_action)
 
     def mouseMoveEvent(self, event):
@@ -296,6 +241,12 @@ class UmlWidget(QtWidgets.QGraphicsView):
             event.accept()
             for url in event.mimeData().urls():
                 fname = str(url.toLocalFile())
-            self.load_file(fname)
+
+            self.mine_items = FileManagment.load_file(fname, self.scene)
+            for item in self.mine_items:
+                self.hovered = item
+                self.moving()
+            self.hovered = None
+
         else:
             event.ignore()
