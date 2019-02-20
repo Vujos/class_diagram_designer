@@ -1,10 +1,9 @@
 from PySide2 import QtWidgets, QtGui, QtCore
 from functools import partial
-import sys
 
-from item_dialog import ItemForm
-from model.item_relation import ItemRelation
-from model.file_managment import FileManagment
+from .item_dialog import ItemForm
+from ..model.item_relation import ItemRelation
+from ..model.file_managment import FileManagment
 
 
 class UmlWidget(QtWidgets.QGraphicsView):
