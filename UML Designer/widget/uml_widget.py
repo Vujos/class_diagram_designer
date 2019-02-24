@@ -17,30 +17,32 @@ class UmlWidget(QtWidgets.QGraphicsView):
         self.position = None
         self.new_rel = None
 
+        self.item_menu = QtWidgets.QMenu()
+        self.general_menu = QtWidgets.QMenu()
+
         self.setStyleSheet("background-color: #F5F5F5")
         self.add_actions()
 
-        self.setContextMenuPolicy(QtCore.Qt.ActionsContextMenu)
         self.setScene(self.scene)
         self.setMouseTracking(True)
 
-        self.graphics_item = None
-
-    def moving(self):
-        for item in self.mine_items:
-            for rel in item.relationships:
-                if rel.host.name == self.hovered.name:
-                    for hov_rel in self.hovered.relationships:
-                        if item.name == hov_rel.host.name and rel.relation_type == hov_rel.relation_type:
-                            hov_rel.draw(self.hovered.graphics_item.pos() + rel.cordinates)
-                            rel.draw(hov_rel.cordinates + item.graphics_item.pos())
+    def update_rel_position(self):
+        for hov_rel in self.hovered.relationships:
+            for rel in hov_rel.host.relationships:
+                if rel.relation_type == hov_rel.relation_type and rel.host.name == self.hovered.name:
+                    hov_rel.draw(self.hovered.graphics_item.pos() + rel.coordinates)
+                    rel.draw(hov_rel.coordinates + hov_rel.host.graphics_item.pos())
 
     def relation_exist(self, item):
         for hov_rel in self.hovered.relationships:
-            if hov_rel.host.name == item.name:
-                for i in range(len(item.relationships) - 1):
-                    if item.relationships[i].relation_type == self.new_rel:
+            if hov_rel.host is not None:
+                if hov_rel.host.name == item.name:
+                    if hov_rel.relation_type.split(' ', 1)[0] == self.new_rel.split(' ', 1)[0]:
                         return True
+                    elif set([hov_rel.relation_type.split(' ', 1)[0], self.new_rel.split(' ', 1)[0]]).issubset(["Unspecified", "Navigable"]):
+                        return True
+            else:
+                return True
         return False
 
     def save_relation(self):
@@ -51,26 +53,22 @@ class UmlWidget(QtWidgets.QGraphicsView):
             self.scene.addItem(first_item.relationships[-1].graphics_item)
             first_item.relationships[-1].host = self.hovered
             first_item.relationships[-1].reverse = True
-            self.hovered.relationships.append(ItemRelation(first_item.relationships[-1].cordinates - first_item.graphics_item.pos(),
+            self.hovered.relationships.append(ItemRelation(first_item.relationships[-1].coordinates - first_item.graphics_item.pos(),
                                                            self.new_rel, first_item, False))
-            first_item.relationships[-1].cordinates = self.position - self.hovered.graphics_item.pos()
+            first_item.relationships[-1].coordinates = self.position - self.hovered.graphics_item.pos()
             self.scene.addItem(self.hovered.relationships[-1].graphics_item)
         else:
             del first_item.relationships[-1]
         self.new_rel = None
         self.hovered = None
 
-    def hide_actions(self):
+    def show_menu(self, pos):
         if self.hovered is not None:
-            for action in self.actions():
-                action.setVisible(True)
-            self.hovered.graphics_item.setSelected(True)
+            self.item_menu.exec_(pos)
         else:
-            for action in self.actions():
-                if action.text() != "Save to file":
-                    action.setVisible(False)
+            self.general_menu.exec_(pos)
 
-    def add_rel(self, relation_type):
+    def add_rel(self, relation_type, navigable=True):
         self.new_rel = relation_type
         self.hovered = self.find_item()
         self.hovered.relationships.append(ItemRelation(self.position, relation_type))
@@ -138,30 +136,30 @@ class UmlWidget(QtWidgets.QGraphicsView):
         return None
 
     def add_actions(self):
-        remove_item = QtWidgets.QAction(self)
-        remove_item.setText("Remove item")
-        remove_item.triggered.connect(self.remove_item)
-        self.addAction(remove_item)
-
-        generalization = QtWidgets.QAction(self)
-        generalization.setText("Generalization")
-        generalization.triggered.connect(partial(self.add_rel, "Generalization"))
-        self.addAction(generalization)
-
-        Composition = QtWidgets.QAction(self)
-        Composition.setText("Composition")
-        Composition.triggered.connect(partial(self.add_rel, "Composition"))
-        self.addAction(Composition)
-
-        Aggregation = QtWidgets.QAction(self)
-        Aggregation.setText("Aggregation")
-        Aggregation.triggered.connect(partial(self.add_rel, "Aggregation"))
-        self.addAction(Aggregation)
-
-        save_action = QtWidgets.QAction(self)
-        save_action.setText("Save to file")
+        save_action = QtWidgets.QAction("Save to file", self)
         save_action.triggered.connect(partial(FileManagment.save_file, self.mine_items))
-        self.addAction(save_action)
+        self.general_menu.addAction(save_action)
+
+        remove_item = QtWidgets.QAction("Remove item", self)
+        remove_item.triggered.connect(self.remove_item)
+        self.item_menu.addAction(remove_item)
+
+        relationships = ["Unspecified Association", "Navigable Association", "Aggregation", "Composition"]
+        rel_type = [" to unsecified association", " to navigable association"]
+
+        self.item_menu.addSeparator()
+
+        for rel in relationships:
+            rel_menu = QtWidgets.QMenu(rel)
+            for rel_t in rel_type:
+                nav_rel = QtWidgets.QAction(rel + rel_t, self)
+                nav_rel.triggered.connect(partial(self.add_rel, rel + rel_t))
+                rel_menu.addAction(nav_rel)
+            self.item_menu.addMenu(rel_menu)
+
+        gen_rel = QtWidgets.QAction("Generalization", self)
+        gen_rel.triggered.connect(partial(self.add_rel, "Generalization"))
+        self.item_menu.addAction(gen_rel)
 
     def mouseMoveEvent(self, event):
         super(UmlWidget, self).mouseMoveEvent(event)
@@ -173,7 +171,7 @@ class UmlWidget(QtWidgets.QGraphicsView):
             if len(self.scene.selectedItems()) == 0:
                 self.hovered.relationships[-1].draw(self.position)
             else:
-                self.moving()
+                self.update_rel_position()
 
     def mousePressEvent(self, event):
         super(UmlWidget, self).mousePressEvent(event)
@@ -183,7 +181,7 @@ class UmlWidget(QtWidgets.QGraphicsView):
             self.save_relation()
         self.hovered = self.find_item()
         if event.buttons() & QtCore.Qt.RightButton:
-            self.hide_actions()
+            self.show_menu(self.mapToGlobal(event.pos()))
 
     def mouseDoubleClickEvent(self, event):
         self.setTransformationAnchor(QtWidgets.QGraphicsView.NoAnchor)
@@ -204,6 +202,11 @@ class UmlWidget(QtWidgets.QGraphicsView):
         super(UmlWidget, self).keyReleaseEvent(event)
         if event.key() == 16777249:
             self.ctrl = False
+        if event.key() == 16777216:
+            self.scene.removeItem(self.hovered.relationships[-1].graphics_item)
+            del self.hovered.relationships[-1]
+            self.new_rel = None
+            self.hovered = None
 
     def wheelEvent(self, event):
         super(UmlWidget, self).wheelEvent(event)
@@ -241,10 +244,12 @@ class UmlWidget(QtWidgets.QGraphicsView):
             for url in event.mimeData().urls():
                 fname = str(url.toLocalFile())
 
-            self.mine_items = FileManagment.load_file(fname, self.scene)
+            del self.mine_items[:]
+            for item in FileManagment.load_file(fname, self.scene):
+                self.mine_items.append(item)
             for item in self.mine_items:
                 self.hovered = item
-                self.moving()
+                self.update_rel_position()
             self.hovered = None
 
         else:

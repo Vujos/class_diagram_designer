@@ -106,11 +106,13 @@ class ItemForm(QtWidgets.QDialog):
         lineEdit = QtWidgets.QLineEdit()
         if layout == "functions_layout":
             hbox.addWidget(lineEdit)
+            lineEdit.setFixedWidth(250)
             lineEdit.setText("+ void example(par type)")
             lineEdit.textEdited.connect(partial(self.check_input, lineEdit, self.regexFunction))
             self.functions_layout.addLayout(hbox)
         elif layout == "atributes_layout":
             hbox.addWidget(lineEdit)
+            lineEdit.setFixedWidth(250)
             lineEdit.setText("- example : string")
             lineEdit.textEdited.connect(partial(self.check_input, lineEdit, self.regexAtribute))
             self.atributes_layout.addLayout(hbox)
