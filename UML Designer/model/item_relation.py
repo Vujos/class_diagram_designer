@@ -3,8 +3,8 @@ import math
 
 
 class ItemRelation():
-    def __init__(self, cordinates, relation_type, host=None, reverse=False):
-        self.cordinates = cordinates
+    def __init__(self, coordinates, relation_type, host=None, reverse=False):
+        self.coordinates = coordinates
         self.host = host
         self.relation_type = relation_type
         self.graphics_item = QtWidgets.QGraphicsPathItem()
@@ -24,11 +24,11 @@ class ItemRelation():
         py = position.y()
 
         if self.host is not None:
-            x = self.cordinates.x() + self.host.graphics_item.pos().x()
-            y = self.cordinates.y() + self.host.graphics_item.pos().y()
+            x = self.coordinates.x() + self.host.graphics_item.pos().x()
+            y = self.coordinates.y() + self.host.graphics_item.pos().y()
         else:
-            x = self.cordinates.x()
-            y = self.cordinates.y()
+            x = self.coordinates.x()
+            y = self.coordinates.y()
 
         dist = math.hypot(px - x, py - y)
 
@@ -38,20 +38,27 @@ class ItemRelation():
             px, x = x, px
             py, y = y, py
 
-        if self.relation_type == "Generalization":
+        if self.relation_type.startswith("Unspecified Association"):
+            poligon = QtGui.QPolygon([QtCore.QPoint(x, y), QtCore.QPoint(x + dist, y)])
+        elif self.relation_type.startswith("Navigable Association"):
+            poligon = QtGui.QPolygon([QtCore.QPoint(x, y), QtCore.QPoint(x + 10, y + 8), QtCore.QPoint(x, y), QtCore.QPoint(x + 10, y - 8), QtCore.QPoint(x, y), QtCore.QPoint(x + dist, y)])
+        elif self.relation_type.startswith("Generalization"):
             dist = dist - 10
             poligon = QtGui.QPolygon([QtCore.QPoint(x, y), QtCore.QPoint(x + dist, y), QtCore.QPoint(x + dist, y + 10),
                                       QtCore.QPoint(x + 10 + dist, y), QtCore.QPoint(x + dist, y - 10), QtCore.QPoint(x + dist, y + 0)])
-        elif self.relation_type == "Composition":
+        elif self.relation_type.startswith("Composition"):
             self.graphics_item.setBrush(QtGui.QBrush(QtGui.QColor("black")))
             poligon = QtGui.QPolygon([QtCore.QPoint(x, y), QtCore.QPoint(x + 10, y - 5), QtCore.QPoint(x + 20, y),
                                       QtCore.QPoint(x + 10, y + 5), QtCore.QPoint(x, y), QtCore.QPoint(x + dist, y)])
-        elif self.relation_type == "Aggregation":
+        elif self.relation_type.startswith("Aggregation"):
             poligon = QtGui.QPolygon([QtCore.QPoint(x, y), QtCore.QPoint(x - 10, y + 5), QtCore.QPoint(x - 20, y),
                                       QtCore.QPoint(x - 10, y - 5), QtCore.QPoint(x, y), QtCore.QPoint(x + dist, y)])
 
         self.graphics_item.setRotation(math.degrees(math.atan2(py - y, px - x)))
         self.graphics_item.setTransformOriginPoint(x, y)
+
+        if "navigable" in self.relation_type:
+            poligon = poligon + QtGui.QPolygon([QtCore.QPoint(x + dist, y), QtCore.QPoint(x + dist - 10, y + 8), QtCore.QPoint(x + dist, y), QtCore.QPoint(x + dist - 10, y - 8), QtCore.QPoint(x + dist, y)])
 
         return poligon
 

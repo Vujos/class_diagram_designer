@@ -30,7 +30,8 @@ class FileManagment():
 
             items = json.loads(file.read())
             relations = []
-            for item in items:
+
+            for i, item in enumerate(items):
                 item = json.loads(item)
                 if "atributes" in item:
                     new_item = ItemClass(item["name"], [], [], item["item_color"], [])
@@ -42,17 +43,18 @@ class FileManagment():
                     for atr in item["atributes"]:
                         new_item.atributes.append(ItemAtribute(**atr))
                 mine_items.append(new_item)
-                new_item.draw(QtCore.QPoint(float(item["cordinates"]['x']), float(item["cordinates"]['y'])))
+                new_item.draw(QtCore.QPoint(float(item["coordinates"]['x']), float(item["coordinates"]['y'])))
                 scene.addItem(new_item.graphics_item)
                 for rel in item["relationships"]:
                     del rel["graphics_item"]
                     relations.append({new_item: ItemRelation(**rel)})
+
             for rel in relations:
                 for key in rel:
                     for item in mine_items:
                         if item.name == rel[key].host:
                             rel[key].host = item
-                            rel[key].cordinates = QtCore.QPointF(float(rel[key].cordinates['x']), float(rel[key].cordinates['y']))
+                            rel[key].coordinates = QtCore.QPointF(float(rel[key].coordinates['x']), float(rel[key].coordinates['y']))
                             key.relationships.append(rel[key])
                             scene.addItem(key.relationships[-1].graphics_item)
                             break
