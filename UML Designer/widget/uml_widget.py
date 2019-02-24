@@ -76,55 +76,44 @@ class UmlWidget(QtWidgets.QGraphicsView):
         self.scene.addItem(self.hovered.relationships[-1].graphics_item)
         self.hovered.graphics_item.setSelected(False)
 
-    def update_rel(self, new_item, old_name):
+    def set_rel(self, new_item, old_name):
         for rel in new_item.relationships:
-            for item in self.mine_items:
-                for item_rel in item.relationships:
-                    if item_rel.host.name == old_name:
-                        item_rel.host = new_item
-                        break
+            for host_rel in rel.host.relationships:
+                if host_rel.host.name == old_name:
+                    host_rel.host = new_item
+                    break
 
     def add_item(self):
-        hovered = self.find_item()
-        item_form = ItemForm(self, self.mine_items, hovered)
-        if hovered is not None:
-            temp_name = hovered.name
-            hovered.name = ""
+        self.hovered = self.find_item()
+        item_form = ItemForm(self, self.mine_items, self.hovered)
+        if self.hovered is not None:
+            temp_name = self.hovered.name
+            self.hovered.name = ""
         item_form.exec_()
         if item_form.result() == 1:
             self.mine_items.append(item_form.item)
-            if hovered is not None:
-                self.position = hovered.graphics_item.pos()
-                self.update_rel(item_form.item, hovered.name)
-                for hov_rel in hovered.relationships:
-                    if hov_rel not in item_form.item.relationships:
-                        for rel in hov_rel.host.relationships:
-                            if hov_rel.relation_type == rel.relation_type and item_form.item.name == rel.host.name:
-                                self.scene.removeItem(rel.graphics_item)
-                                hov_rel.host.relationships.remove(rel)
+            if self.hovered is not None:
+                self.position = self.hovered.graphics_item.pos()
+                self.set_rel(item_form.item, self.hovered.name)
                 self.remove_item()
                 for rel in item_form.item.relationships:
                     self.scene.addItem(rel.graphics_item)
             item_form.item.draw(self.position)
             self.scene.addItem(item_form.item.graphics_item)
-        elif hovered is not None:
-            hovered.name = temp_name
+        elif self.hovered is not None:
+            self.hovered.name = temp_name
+        self.hovered = None
 
     def remove_item(self):
-        self.hovered = self.find_item()
-        if self.hovered is not None:
-            for item in self.mine_items:
-                for rel in item.relationships:
-                    if rel.host.name == self.hovered.name:
-                        self.scene.removeItem(rel.graphics_item)
-                        item.relationships.remove(rel)
-            for item in self.mine_items:
-                if item.graphics_item == self.hovered.graphics_item:
-                    self.scene.removeItem(item.graphics_item)
-                    for i, rel in enumerate(item.relationships, 0):
-                        self.scene.removeItem(rel.graphics_item)
-                    self.mine_items.remove(item)
-            self.hovered = None
+        for rel in self.hovered.relationships:
+            for host_rel in rel.host.relationships:
+                if host_rel.host.name == self.hovered.name:
+                    self.scene.removeItem(host_rel.graphics_item)
+                    rel.host.relationships.remove(host_rel)
+            self.scene.removeItem(rel.graphics_item)
+        self.scene.removeItem(self.hovered.graphics_item)
+        self.mine_items.remove(self.hovered)
+        self.hovered = None
 
     def find_item(self):
         if self.scene.itemAt(self.position, QtGui.QTransform()) is not None:
